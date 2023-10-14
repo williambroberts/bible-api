@@ -1,0 +1,22 @@
+/books->list of books 
+/books/:bookid ->one from /books
+/books/:bookid/chapters ->list of chapters from 1 book
+/books/:bookid/chapters/:chapterid -> one from above
+/books/:bookid/chapters/:chapterid/verses->all verses from chapter
+/books/:bookid/chapters/:chapterid/verses/:verseid ->single verse from chapter
+
+/search?query=[SearchTerm]&limit=[limit]&offset=[offset]
+
+/greek/:id ->strong definition greek
+
+/hebrew/:id -> strong definition hebrew
+
+
+
+
+book 
+    name
+    shortname no spaces
+    id
+    category
+    chapters
