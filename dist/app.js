@@ -17,6 +17,8 @@ const express_1 = __importDefault(require("express"));
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const config_1 = __importDefault(require("./db/config"));
+const Errors_1 = require("./Errors");
+const ErrorMiddleware_1 = require("./Middleware/ErrorMiddleware");
 dotenv_1.default.config();
 const versesJSon = require("../../bible/verses.json");
 function createApp() {
@@ -36,7 +38,9 @@ function createApp() {
     })));
     app.get("/books/:bookid", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let bookid = req.params.bookid;
-        //todo if no id / not number / out of range
+        if (isNaN(+bookid)) {
+            throw new Errors_1.BadRequestError("Bookid must be an integer");
+        }
         const [data] = yield config_1.default.query(`select * from bible_chapters
         where id = ?
         
@@ -44,8 +48,10 @@ function createApp() {
         res.json({ data });
     })));
     app.get("/books/:bookid/chapters", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
-        let bookid = req.params.bookid;
-        //todo if no book id / not number / out of range
+        let bookid = req.params.bookid; //todo if no book id / not number / out of range
+        if (isNaN(+bookid)) {
+            throw new Errors_1.BadRequestError("Bookid must be an integer");
+        }
         const [data] = yield config_1.default.query(`
     select distinct chapter,count(verse) as count from bible_verses_asvs
     where book = ?
@@ -55,7 +61,12 @@ function createApp() {
     })));
     app.get("/books/:bookid/chapters/:chapterid", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let { bookid, chapterid } = req.params;
-        //todo if no id, not number/ out of range
+        if (isNaN(+bookid)) {
+            throw new Errors_1.BadRequestError("Bookid must be an integer");
+        }
+        if (isNaN(+chapterid)) {
+            throw new Errors_1.BadRequestError("Chapterid must be an integer");
+        }
         const [data] = yield config_1.default.query(`select distinct chapter,count(verse) as count from bible_verses_asvs
         where book = ? and chapter = ?
         group by chapter
@@ -64,7 +75,12 @@ function createApp() {
     })));
     app.get("/books/:bookid/chapters/:chapterid/verses", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let { bookid, chapterid } = req.params;
-        //todo if no ids, out of range/ not numbers
+        if (isNaN(+bookid)) {
+            throw new Errors_1.BadRequestError("Bookid must be an integer");
+        }
+        if (isNaN(+chapterid)) {
+            throw new Errors_1.BadRequestError("Chapterid must be an integer");
+        }
         const [data] = yield config_1.default.query(`select distinct * from bible_verses_asvs
         where book = ? 
         and chapter = ?
@@ -74,7 +90,6 @@ function createApp() {
     })));
     app.get("/occurances/:word", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let query = req.params.word;
-        //todo handle errors
         const [data] = yield config_1.default.query(`
     select distinct count(*) as count from bible_verses_asvs
     where text like ?
@@ -84,7 +99,15 @@ function createApp() {
     })));
     app.get("/books/:bookid/chapters/:chapterid/verses/:verseid", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let { bookid, chapterid, verseid } = req.params;
-        //todo if no ids, out of range/ not numbers
+        if (isNaN(+bookid)) {
+            throw new Errors_1.BadRequestError("Bookid must be integer");
+        }
+        if (isNaN(+chapterid)) {
+            throw new Errors_1.BadRequestError("Bookid must be integer");
+        }
+        if (isNaN(+verseid)) {
+            throw new Errors_1.BadRequestError("Bookid must be integer");
+        }
         const [data] = yield config_1.default.query(`select distinct * from bible_verses_asvs
         where book = ? 
         and chapter = ?
@@ -107,8 +130,8 @@ function createApp() {
         res.status(200);
         res.json({ number: data.length, data });
     })));
-    app.get("/graph/:id", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
-        let word = req.params.id;
+    app.get("/graph/:word", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
+        let word = req.params.word;
         let [data] = yield config_1.default.query(`
         select distinct count(*) as occurances, book
         from bible_verses_asvs
@@ -155,24 +178,36 @@ function createApp() {
             res.json({ data });
         }
     })));
-    app.get("/chapterverses/:bookid", (req, res) => {
+    app.get("/chapterverses/:bookid", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let book = req.params.bookid;
-        //todo no bookid 400
-        let [data] = config_1.default.query(`select distinct * from chapter_verses
+        if (isNaN(+book)) {
+            throw new Errors_1.BadRequestError("Book Id is required, range 1-66");
+        }
+        let data = yield config_1.default.query(`select distinct * from chapter_verses
     where book = ?
     `, [book]);
         res.json({ data });
-    });
-    app.get("/chapterverses/:bookid/chapter/:chapterid", (req, res) => {
+    })));
+    app.get("/chapterverses/:bookid/chapter/:chapterid", (0, express_async_handler_1.default)((req, res) => __awaiter(this, void 0, void 0, function* () {
         let book = req.params.bookid;
         let chapter = req.params.chapterid;
-        //todo params 400
-        let [data] = config_1.default.query(`select distinct * from chapter_verses
+        if (isNaN(+book)) {
+            throw new Errors_1.BadRequestError("Book Id is required, range 1-66");
+        }
+        if (isNaN(+chapter)) {
+            throw new Errors_1.BadRequestError("Chapter Id is required");
+        }
+        let [data] = yield config_1.default.query(`select distinct * from chapter_verses
     where book = ?
     and chapter = ?
     `, [book, chapter]);
         res.json({ data });
+    })));
+    app.use("*", (req, res) => {
+        throw new Errors_1.NotFoundError();
+        //res.status(404).send("404 will")
     });
+    app.use(ErrorMiddleware_1.ErrorHandler);
     return app;
 }
 exports.default = createApp;
