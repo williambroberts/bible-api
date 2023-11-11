@@ -13,3 +13,8 @@ GET http://localhost:5000/chapterverses/1/chapter/1
 
 
 GET http://localhost:5000/chapterverses/1c
+
+
+###
+
+http://localhost:5000/book
