@@ -5,6 +5,8 @@ import express from "express"
 import ash from "express-async-handler"
 import dotenv from "dotenv"
 import pool from "./db/config"
+import { BadRequestError, NotFoundError } from "./Errors"
+import { ErrorHandler } from "./Middleware/ErrorMiddleware"
 dotenv.config()
 const versesJSon = require("../../bible/verses.json")
 
@@ -27,7 +29,6 @@ app.get("/",ash(async(req:Request,res:Response)=>{
 }))
 
 app.get("/books",ash(async(req:Request,res:Response)=>{
-
     const [data] = await pool.query(`
     select * from bible_chapters
     `)
@@ -37,7 +38,9 @@ app.get("/books",ash(async(req:Request,res:Response)=>{
 }))
 app.get("/books/:bookid",ash(async(req:Request,res:Response)=>{
     let bookid = req.params.bookid
-    //todo if no id / not number / out of range
+    if (isNaN(+bookid)){
+        throw new BadRequestError("Bookid must be an integer")
+    }
     const [data]=await pool.query(
         `select * from bible_chapters
         where id = ?
@@ -48,8 +51,11 @@ app.get("/books/:bookid",ash(async(req:Request,res:Response)=>{
 }))
 
 app.get("/books/:bookid/chapters",ash(async(req:Request,res:Response)=>{
-    let bookid  = req.params.bookid
-    //todo if no book id / not number / out of range
+    let bookid  = req.params.bookid//todo if no book id / not number / out of range
+    if (isNaN(+bookid)){
+        throw new BadRequestError("Bookid must be an integer")
+    }
+   
     const [data]= await pool.query(`
     select distinct chapter,count(verse) as count from bible_verses_asvs
     where book = ?
@@ -60,7 +66,12 @@ app.get("/books/:bookid/chapters",ash(async(req:Request,res:Response)=>{
 
 app.get("/books/:bookid/chapters/:chapterid",ash(async(req:Request,res:Response)=>{
     let {bookid,chapterid}=req.params
-    //todo if no id, not number/ out of range
+    if (isNaN(+bookid)){
+        throw new BadRequestError("Bookid must be an integer")
+    }
+    if (isNaN(+chapterid)){
+        throw new BadRequestError("Chapterid must be an integer")
+    }
     const [data]=await pool.query(
         `select distinct chapter,count(verse) as count from bible_verses_asvs
         where book = ? and chapter = ?
@@ -71,7 +82,12 @@ app.get("/books/:bookid/chapters/:chapterid",ash(async(req:Request,res:Response)
 }))
 app.get("/books/:bookid/chapters/:chapterid/verses",ash(async(req:Request,res:Response)=>{
     let {bookid,chapterid}= req.params
-    //todo if no ids, out of range/ not numbers
+    if (isNaN(+bookid)){
+        throw new BadRequestError("Bookid must be an integer")
+    }
+    if (isNaN(+chapterid)){
+        throw new BadRequestError("Chapterid must be an integer")
+    }
     const [data]=await pool.query(
         `select distinct * from bible_verses_asvs
         where book = ? 
@@ -84,7 +100,6 @@ app.get("/books/:bookid/chapters/:chapterid/verses",ash(async(req:Request,res:Re
 
 app.get("/occurances/:word",ash(async(req:Request,res:Response)=>{
     let query = req.params.word
-    //todo handle errors
     const [data]=await pool.query(`
     select distinct count(*) as count from bible_verses_asvs
     where text like ?
@@ -96,7 +111,15 @@ app.get("/occurances/:word",ash(async(req:Request,res:Response)=>{
 
 app.get("/books/:bookid/chapters/:chapterid/verses/:verseid",ash(async(req:Request,res:Response)=>{
     let {bookid,chapterid,verseid}= req.params
-    //todo if no ids, out of range/ not numbers
+    if (isNaN(+bookid)){
+        throw new BadRequestError("Bookid must be integer")
+    }
+    if (isNaN(+chapterid)){
+        throw new BadRequestError("Bookid must be integer")
+    }
+    if (isNaN(+verseid)){
+        throw new BadRequestError("Bookid must be integer")
+    }
     const [data]=await pool.query(
         `select distinct * from bible_verses_asvs
         where book = ? 
@@ -126,8 +149,8 @@ app.get("/search",ash(async(req:Request,res:Response)=>{
     res.json({number:data.length,data})
 
 }))
-app.get("/graph/:id",ash(async(req:Request,res:Response)=>{
-    let word = req.params.id
+app.get("/graph/:word",ash(async(req:Request,res:Response)=>{
+    let word = req.params.word
     let [data]= await pool.query(`
         select distinct count(*) as occurances, book
         from bible_verses_asvs
@@ -189,26 +212,40 @@ app.get("/strong/:id",ash(async(req:Request,res:Response)=>{
     
 }))
 
-app.get("/chapterverses/:bookid",(req,res)=>{
+app.get("/chapterverses/:bookid",ash(async(req,res)=>{
     let book = req.params.bookid
-    //todo no bookid 400
-    let [data]  = pool.query(`select distinct * from chapter_verses
+    
+    if (isNaN(+book)){
+        throw new BadRequestError("Book Id is required, range 1-66")
+    }
+    let data =await  pool.query(`select distinct * from chapter_verses
     where book = ?
     `,[book])
     res.json({data})
-})
+}))
 
-app.get("/chapterverses/:bookid/chapter/:chapterid",(req,res)=>{
+app.get("/chapterverses/:bookid/chapter/:chapterid",ash(async(req,res)=>{
     let book = req.params.bookid
     let chapter = req.params.chapterid
-    //todo params 400
-    let [data]= pool.query(`select distinct * from chapter_verses
+    if (isNaN(+book)){
+        throw new BadRequestError("Book Id is required, range 1-66")
+    }
+    if (isNaN(+chapter)){
+        throw new BadRequestError("Chapter Id is required")
+    }
+    let [data]=await  pool.query(`select distinct * from chapter_verses
     where book = ?
     and chapter = ?
     `,[book,chapter])
     res.json({data})
+}))
+
+app.use("*",(req,res)=>{
+    throw new NotFoundError();
+    //res.status(404).send("404 will")
 })
 
+app.use(ErrorHandler)
     return app
 }
 export default createApp

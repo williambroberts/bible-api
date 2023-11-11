@@ -1,4 +1,15 @@
 # json
 
+GET http://localhost:5000/graph/apple
 
-GET http://localhost:5000/json  
+###
+
+
+
+GET http://localhost:5000/chapterverses/1/chapter/1
+
+
+###
+
+
+GET http://localhost:5000/chapterverses/1c
